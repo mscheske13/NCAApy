@@ -40,6 +40,7 @@ def scrape_roster(roster_id):
 
 
 def scrape_day(date, conference_id='0', tournament_id='', division=1):
+    time.sleep(2)
     return get_day(date, conference_id, tournament_id, division)
 
 
