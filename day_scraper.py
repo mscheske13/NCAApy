@@ -125,7 +125,7 @@ def collect_scores(soup, day):
     return day
 
 
-def get_day(date, conference_id, tournament_id, division):
+def get_day(date, conference_id, tournament_id, division, w, season_id):
     if isinstance(date, datetime):
         date = date.strftime('%m/%d/%Y')
     day = pd.DataFrame()
@@ -137,6 +137,10 @@ def get_day(date, conference_id, tournament_id, division):
         year_id += 2
     if division == 3:
         year_id += 4
+    if w:
+        year_id -= 1
+    if season_id:
+        year_id = season_id
     date2 = date.replace('/', '%2F')
     url = (f'https://stats.ncaa.org/contests/livestream_scoreboards?utf8=%E2%9C%93&season_division_id='
            f'{year_id}&game_date={date2}&conference_id={conference_id}&tournament_id={tournament_id}&commit=Submit')
@@ -146,9 +150,6 @@ def get_day(date, conference_id, tournament_id, division):
     day = collect_teams(soup, day)
     day = collect_info(soup, day)
     day = collect_game_ids(soup, day)
-    # if 'Canceled' in soup.getText():
-    #     day = day.dropna(subset=['Attendance'])
-    #     day.reset_index(drop=True, inplace=True)
     day = day.dropna(subset=['Game_id'])
     day.reset_index(drop=True, inplace=True)
     day = collect_scores(soup, day)
@@ -157,3 +158,4 @@ def get_day(date, conference_id, tournament_id, division):
                      'Location', 'Event', 'is_Neutral', 'Attendance', 'Away_id', 'Home_id', 'Game_id']
     day = day[desired_order]
     return day
+
