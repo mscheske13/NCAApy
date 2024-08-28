@@ -39,13 +39,5 @@ def scrape_roster(roster_id):
     return get_roster(roster_id)
 
 
-def scrape_day(date, conference_id='0', tournament_id='', division=1):
-    time.sleep(2)
-    return get_day(date, conference_id, tournament_id, division)
-
-
-def helpme():
-    with open('HelpMe.txt', 'r') as file:
-        content = file.read()
-    print(content)
-
+def scrape_day(date, conference_id='0', tournament_id='', division=1, w=False, season_id=None):
+    return ds.get_day(date, conference_id, tournament_id, division, w, season_id)
