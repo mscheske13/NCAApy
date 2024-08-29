@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools","wheel","pandas","tqdm","requests","lxml"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "NCAApy"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+authors = [
+    {name = "mscheske13"},
+    {name = "Joseph Armstrong", email="armstrongjoseph08@gmail.com"}
+]
+
+maintainers = [
+    {name = "mscheske13"},
+    {name = "Joseph Armstrong", email="armstrongjoseph08@gmail.com"}
+]
+
+description = "The goal of this project is to provide the neccessary tools for scraping NCAA results. The project is best designed college basketball however, a lot of the functions can work for other sports. I welcome contributors who would be interested in making this work for other sports."
+
+keywords = ['sports','NCAA','college']
+
+classifiers = [
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13'
+]
+
+dependencies = [
+    "setuptools>=67.6.0",
+    "wheel",
+    "pyarrow>=11.0.0",
+    "pandas>=2.2.2",
+    "tqdm",
+    "requests",
+    "keyring",
+    "lxml"
+]
+
+[project.urls]
+homepage = "https://github.com/mscheske13/NCAApy"
+documentation = "https://github.com/mscheske13/NCAApy"
+repository = "https://github.com/mscheske13/NCAApy.git"
+changelog = "https://github.com/mscheske13/NCAApy/blob/main/CHANGELOG.md"
