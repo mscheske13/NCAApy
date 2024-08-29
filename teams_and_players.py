@@ -3,6 +3,8 @@ import time
 
 def get_schedule(schedule_id):
     response = requests.get(f'https://stats.ncaa.org/teams/{schedule_id}', headers=headers)
+    time.sleep(2)
+    
     html_content = response.text
     html_buffer = StringIO(html_content)
     schedule = pd.read_html(html_buffer)[0]
@@ -99,8 +101,10 @@ def get_player(player_id):
     while attempts < 5:
         try:
             response = requests.get(f'https://stats.ncaa.org/players/{player_id}', headers=headers)
-
+            # add extra responses from server, 401, 403, 404, 501
+            # get this for all modules
             if response.status_code == 200:
+                time.sleep(2)
                 break
         except requests.exceptions.RequestException:
             attempts += 1
@@ -184,7 +188,7 @@ def get_player(player_id):
     player_stuff.loc[len(player_stuff) - 1, 'Result'] = pd.NA
     return player_stuff
 
-
+# change pd.na
 def get_coach(coach_id):
     response = requests.get(f'https://stats.ncaa.org/people/{coach_id}?sport_code=MBB', headers=headers)
     html_content = response.text
@@ -192,7 +196,7 @@ def get_coach(coach_id):
     soup = BeautifulSoup(html_content, 'html.parser')
     coach = soup.find_all('dd')[0].text
     coach_stuff = pd.read_html(html_buffer)[1]
-    coach_stuff.drop(columns=['Notes', 'Ties'], inplace=True)
+    # coach_stuff.drop(columns=['Notes', 'Ties'], inplace=True)
     coach_stuff['Coach'] = coach
     a_tags = soup.find('tbody').find_all('a')
     year_ids = []
