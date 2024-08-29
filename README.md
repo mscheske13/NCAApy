@@ -7,6 +7,7 @@ Dependicies:
 Pandas
 Numpy
 BeasutifulSoup4
+Requests
 
 
 Functions:
