@@ -4,8 +4,8 @@ import variables as v
 
 
 #R: Properly working soup object of the webpage for the scoreboard results
-#M Dataframe 'day'
-#E Takes in dataframe 'day' and collects the team names, and team_ids
+#M: Dataframe 'day'
+#E: Takes in dataframe 'day' and collects the team names, and team_ids
 def collect_teams(soup, day): 
     aways = []
     away_ids = []
@@ -46,9 +46,9 @@ def collect_teams(soup, day):
     return day
 
 
-#R properly working soup object of scoreboard page
-#M dataframe 'day'
-#E adds columns of information to the final dataframe for all games
+#R: properly working soup object of scoreboard page
+#M: dataframe 'day'
+#E: adds columns of information to the final dataframe for all games 
 def collect_info(soup, day):
     game_infos = soup.find_all('td', colspan='10') #grab all 
     count = 0
@@ -56,12 +56,12 @@ def collect_info(soup, day):
     events = []
     is_neutral = []
     times = []
-    attendance = []
+    attendance = [] #Initialize Columns
     for index, info in enumerate(game_infos):
         info = info.text.split()
-        if '/' not in info[0]:
+        if '/' not in info[0]: #if there's no date, move on
             continue
-        if len(info) < 4:
+        if len(info) < 4: #game was cancelled or is otherwise missing key information
             arenas.append(pd.NA)
             events.append(pd.NA)
             is_neutral.append(pd.NA)
@@ -69,7 +69,7 @@ def collect_info(soup, day):
             attendance.append(pd.NA)
             count += 1
             continue
-        if index + 1 != len(game_infos) and '/' not in game_infos[index + 1].text.split()[0]:
+        if index + 1 != len(game_infos) and '/' not in game_infos[index + 1].text.split()[0]: 
             description = game_infos[index + 1].text.split()
             if '@' not in description[0]:
                 arenas.append(day['Home'][count])
