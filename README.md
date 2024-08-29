@@ -3,6 +3,11 @@ Hi and welcome to NCAApy! The goal of this project is to provide the neccessary 
 The project is best designed college basketball however, a lot of the functions can work for other sports. I welcome contributors
 who would be interested in making this work for other sports. Idea for this project is based on the work of Jake Flancer with his BigBallR package. See his work here: https://github.com/jflancer/bigballR
 
+Dependicies:
+Pandas
+Numpy
+BeasutifulSoup4
+
 
 Functions:
 
