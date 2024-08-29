@@ -1,47 +1,56 @@
+#All the functions needed for scrape_day
 from Helpers import *
 import variables as v
 
 
-def collect_teams(soup, day):
+#R: Properly working soup object of the webpage for the scoreboard results
+#M Dataframe 'day'
+#E Takes in dataframe 'day' and collects the team names, and team_ids
+def collect_teams(soup, day): 
     aways = []
     away_ids = []
     homes = []
-    home_ids = []
-    teams_messy = soup.find_all('td', class_='opponents_min_width')
+    home_ids = [] #initalize the columns
+    teams_messy = soup.find_all('td', class_='opponents_min_width') #Grabs all teams objects from webpage
     count = 0
     for team in teams_messy:
-        a_tag = team.find('a')
-        temp = team.text.strip()
-        if len(temp.split('(')) > 1:
+        a_tag = team.find('a') #NCAA teams have a hyperlink which we're grabbing
+        temp = team.text.strip() #Team name + Event location (if applicable)
+        if len(temp.split('(')) > 1: 
+            #if event location is listed,  get only the team name
             team = ' '.join(team.text.strip().split()[:-1]).strip()
         else:
-            team = team.text.strip()
-        if not a_tag:
-            if count % 2 == 0:
+            #otherwise its accurate
+            team = temp 
+        if not a_tag: #Team is not part of the NCAA, thus having no id
+            if count % 2 == 0: #Appends the team in the correct column
                 away_ids.append(pd.NA)
                 aways.append(team)
             else:
                 home_ids.append(pd.NA)
                 homes.append(team)
             count += 1
-            continue
-        box = int(a_tag['href'].split('/')[-1])
+            continue # Work completed for iteration, thus no more needs to be done
+        team_id = int(a_tag['href'].split('/')[-1]) 
         if count % 2 == 0:
-            away_ids.append(box)
+            away_ids.append(team_id)
             aways.append(team)
         else:
-            home_ids.append(box)
+            home_ids.append(team_id)
             homes.append(team)
         count += 1
     day['Away'] = aways
     day['Home'] = homes
     day['Away_id'] = away_ids
-    day['Home_id'] = home_ids
+    day['Home_id'] = home_ids #build the dataframe column by column
     return day
 
 
+#R properly working soup object of scoreboard page
+#M dataframe 'day'
+#E adds columns of information to the final dataframe for all games
 def collect_info(soup, day):
-    game_infos = soup.find_all('td', colspan='10')
+    game_infos = soup.find_all('td', colspan='10') #grab all 
     count = 0
     arenas = []
     events = []
