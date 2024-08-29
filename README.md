@@ -10,7 +10,7 @@ scrape_day(date, conference_id='0', tournament_id='', division=1, w=False, seaso
     Using a date in the format of mm/dd/yyyy in a string, or a datetime format, this will scrape the game results for the day. 
     Make 'w'=True to change it to women's basketball. It will give you box score ids needed for scrape_game, and scrape_box, 
     schedule id's for the 'home' and 'away' team, as well as basic game information, like score, attendance, location, and event. 
-    Altough teams are designated as 'home' and 'away' this is for simplicitiy and there is a is_neuutral column to clarify whether 
+    Altough teams are designated as 'home' and 'away' this is for simplicitiy and there is a is_neutral column to clarify whether 
     or not it is literally a home game. 
 
 
