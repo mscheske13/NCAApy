@@ -1,3 +1,7 @@
+# Sports
+from NCAApy.basketball import *
+
+# Helpers
 from NCAApy.day_scraper import *  # noqa: F403
 from NCAApy.game_scraper import *  # noqa: F403
 from NCAApy.helpers import *  # noqa: F403

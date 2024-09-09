@@ -28,7 +28,7 @@ headers = {
 }
 
 
-def get_starters(pbp):
+def _get_starters(pbp: pd.DataFrame) -> list:
     col_names = pbp.columns.tolist()  # used to get the name of teams
     starters = [[], None, []]
     benches = [[], None, []]
@@ -61,14 +61,14 @@ def get_starters(pbp):
     return starters
 
 
-def get_positions(stats):
+def _get_positions(stats: list) -> list:
     # dfs = pd.read_html(stats)[3:]
     away_positions = dict(zip(stats[0]["Name"], stats[0]["P"]))
     home_positions = dict(zip(stats[1]["Name"], stats[1]["P"]))
     return [away_positions, home_positions]
 
 
-def order_players(players, positions):
+def _order_players(players: list, positions: dict) -> list:
     lineup = []
     roles = ["G", "F", "C"]
     for role in roles:
@@ -78,13 +78,18 @@ def order_players(players, positions):
     return lineup
 
 
-def to_lineup_df(pbp, starters, positions, is_home):
+def _to_lineup_df(
+    pbp: pd.DataFrame,
+    starters: list,
+    positions: dict,
+    is_home: bool
+) -> pd.DataFrame:
     col_names = pbp.columns.tolist()
     if is_home:
         col = 3
     else:
         col = 1
-    in_game = order_players(starters, positions)
+    in_game = _order_players(starters, positions)
     before = in_game
     finished_lists = []
     for event in pbp[f"{col_names[col]}"]:
@@ -97,28 +102,28 @@ def to_lineup_df(pbp, starters, positions, is_home):
             in_game.append(event.split(",")[0])
         if len(in_game) == 5:
             before = in_game
-        before = order_players(before, positions)
+        before = _order_players(before, positions)
         finished_lists.append(before)
 
-    to_add = pd.DataFrame(finished_lists)
-    to_add.columns = [
+    to_add_df = pd.DataFrame(finished_lists)
+    to_add_df.columns = [
         f"{col_names[col]}_1",
         f"{col_names[col]}_2",
         f"{col_names[col]}_3",
         f"{col_names[col]}_4",
         f"{col_names[col]}_5",
     ]
-    return to_add
+    return to_add_df
 
 
-def split_event(event):
+def _split_event(event: str) -> list:
     if ", " in event:
         return event.split(", ", 1)[::-1]
     else:
         return [event, pd.NA]
 
 
-def swap_rows(pbp, row_1, row_2):
+def _swap_rows(pbp: pd.DataFrame, row_1: int, row_2: int) -> pd.DataFrame:
     rows = pbp.index.tolist()
     old = copy.deepcopy(rows)
     temp = rows[rows.index(row_1)]
@@ -128,7 +133,7 @@ def swap_rows(pbp, row_1, row_2):
     return pbp
 
 
-def event_packer(pbp):
+def _event_packer(pbp: pd.DataFrame) -> list:
     packages = []
     extra = 1
     for index, time in enumerate(pbp["Time"]):
@@ -146,7 +151,7 @@ def event_packer(pbp):
     return packages
 
 
-def time_convert(time_str, half, total_halves):
+def _time_convert(time_str, half, total_halves):
     # Split the time into minutes, seconds, and milliseconds
     minutes, seconds, _ = map(int, time_str.split(":"))
 
@@ -183,7 +188,7 @@ def time_convert(time_str, half, total_halves):
     return total_remaining_time
 
 
-def time_counter(time, half):
+def _time_counter(time, half):
     minutes, seconds, _ = map(int, time.split(":"))
     time_played = minutes * 60 + seconds
     if half <= 2:
@@ -198,7 +203,7 @@ def time_counter(time, half):
     return time_played
 
 
-def opponent_split(schedule, team):
+def _opponent_split(schedule, team):
     game_types = []
     locations = []
     events = []
@@ -231,7 +236,7 @@ def opponent_split(schedule, team):
     return schedule
 
 
-def split_result(schedule, team):
+def _split_result(schedule, team):
     result = []
     team_score = []
     opp_score = []
@@ -281,7 +286,7 @@ def split_result(schedule, team):
     return schedule
 
 
-def clean_and_cast(player_stuff, column):
+def _clean_and_cast(player_stuff, column):
     new_col = []
     for index, cell in enumerate(player_stuff[column]):
         if isinstance(cell, str):

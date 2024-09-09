@@ -1,5 +1,6 @@
 import copy
 import logging
+import time
 from io import StringIO
 
 import numpy as np
@@ -8,28 +9,28 @@ import requests
 from bs4 import BeautifulSoup
 
 from NCAApy.helpers import (
-    event_packer,
-    get_positions,
-    get_starters,
+    _event_packer,
+    _get_positions,
+    _get_starters,
+    _split_event,
+    _swap_rows,
+    _time_convert,
+    _time_counter,
+    _to_lineup_df,
     headers,
-    split_event,
-    swap_rows,
-    time_convert,
-    time_counter,
-    to_lineup_df,
 )
 
 # example: str = "https://stats.ncaa.org/contests/5254095/play_by_play"
 
 
-def build_lineups(pbp, stats):
-    starters = get_starters(pbp)
-    positions = get_positions(stats)
+def _build_lineups(pbp: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
+    starters = _get_starters(pbp)
+    positions = _get_positions(stats)
     # TODO: Reimplement this.
     # Why are we failing in the first place?
     # What's causing the `try` to fail?
     try:
-        away_players = to_lineup_df(
+        away_players_df = _to_lineup_df(
             pbp, starters[0], positions[0], is_home=False
         )
     except Exception as e:
@@ -37,15 +38,15 @@ def build_lineups(pbp, stats):
             "Unhandled exception in `NCAApy.game_scraper.build_lineups()`: " +
             e
         )
-        away_players = pd.DataFrame()
+        away_players_df = pd.DataFrame()
         col_names = pbp.columns.tolist()
         for n in range(5):
-            away_players[f'{col_names[1]}_{n + 1}'] = 'Unavailable'
+            away_players_df[f'{col_names[1]}_{n + 1}'] = 'Unavailable'
     # TODO: Reimplement this.
     # Why are we failing in the first place?
     # What's causing the `try` to fail?
     try:
-        home_players = to_lineup_df(
+        home_players_df = _to_lineup_df(
             pbp, starters[1], positions[1], is_home=True
         )
     except Exception as e:
@@ -53,20 +54,21 @@ def build_lineups(pbp, stats):
             "Unhandled exception in `NCAApy.game_scraper.build_lineups()`: " +
             e
         )
-        home_players = pd.DataFrame()
+        home_players_df = pd.DataFrame()
         col_names = pbp.columns.tolist()
         for n in range(5):
-            home_players[f'{col_names[3]}_{n + 1}'] = 'Unavailable'
-    df_combined = pd.concat([away_players, home_players], axis=1)
+            home_players_df[f'{col_names[3]}_{n + 1}'] = 'Unavailable'
+    df_combined = pd.concat([away_players_df, home_players_df], axis=1)
     pbp = pd.concat([pbp, df_combined], axis=1)
     return pbp
 
 
-def cleanup(pbp):
+def _cleanup(pbp: pd.DataFrame) -> pd.DataFrame:
+    print(type(pbp))
     col_names = pbp.columns.tolist()
     pbp['Event'] = pbp[f'{col_names[1]}'].combine_first(pbp[f'{col_names[3]}'])
     pbp.drop(columns=[col_names[1], col_names[3]], inplace=True)
-    pbp[['Description', 'Player']] = pbp['Event'].apply(split_event).apply(
+    pbp[['Description', 'Player']] = pbp['Event'].apply(_split_event).apply(
         pd.Series
     )
     pbp.drop(columns=['Event'], inplace=True)
@@ -111,8 +113,8 @@ def cleanup(pbp):
     return pbp
 
 
-def event_sorter(pbp):
-    indices = event_packer(pbp)
+def _event_sorter(pbp: pd.DataFrame) -> pd.DataFrame:
+    indices = _event_packer(pbp)
     priorities = [
         'assist',
         'jumpball',
@@ -132,7 +134,7 @@ def event_sorter(pbp):
         'timeout'
     ]
     if pbp['Description'][0] != 'jumpball lost':
-        swap_rows(pbp, 0, 1)
+        _swap_rows(pbp, 0, 1)
     new_orders = []
     for index in indices[1:]:
         if len(index) == 1:
@@ -153,7 +155,7 @@ def event_sorter(pbp):
             for index, key in enumerate(non_sorted):
                 proper = sorted_indices[index]
                 if key != proper:
-                    pbp = swap_rows(pbp, key, proper)
+                    pbp = _swap_rows(pbp, key, proper)
                     temp = non_sorted[non_sorted.index(key)]
                     non_sorted[non_sorted.index(key)] = non_sorted[
                         non_sorted.index(proper)
@@ -205,23 +207,23 @@ def event_sorter(pbp):
     return pbp
 
 
-def easy_features(pbp):
+def _easy_features(pbp: pd.DataFrame) -> pd.DataFrame:
     prev = '50'
     half = 1
     half_column = []
-    for index, time in enumerate(pbp['Time']):
-        if time.split(':')[0] > prev:
+    for index, time_str in enumerate(pbp['Time']):
+        if time_str.split(':')[0] > prev:
             half += 1
-        prev = time.split(':')[0]
+        prev = time_str.split(':')[0]
         half_column.append(half)
     pbp['Period'] = half_column
     game_seconds_left = []
     game_seconds = []
-    for index, time in enumerate(pbp['Time']):
+    for index, time_str in enumerate(pbp['Time']):
         game_seconds_left.append(
-            time_convert(time, pbp['Period'][index], half)
+            _time_convert(time_str, pbp['Period'][index], half)
         )
-        game_seconds.append(time_counter(time, pbp['Period'][index]))
+        game_seconds.append(_time_counter(time_str, pbp['Period'][index]))
     pbp['Game_seconds_left'] = game_seconds_left
     pbp['Game_seconds'] = game_seconds
     col_names = pbp.columns.tolist()
@@ -254,7 +256,11 @@ def easy_features(pbp):
     return pbp
 
 
-def poss_counter(pbp, teams, team_players):
+def _poss_counter(
+    pbp: pd.DataFrame,
+    teams: list,
+    team_players: dict
+) -> pd.DataFrame:
     poss_log = [None]
     poss_count = [1]
     poss = 1
@@ -308,7 +314,8 @@ def poss_counter(pbp, teams, team_players):
     return pbp
 
 
-def fix_bug(box, pbp):
+def _fix_bug(box: pd.DataFrame, pbp: pd.DataFrame) -> pd.DataFrame:
+    print(type(box))
     col_names = pbp.columns.tolist()
     for i in range(len(pbp)):
         if pbp.at[i, col_names[4]] == 'period start':
@@ -341,7 +348,7 @@ def fix_bug(box, pbp):
     return pbp
 
 
-def shot_splitter(pbp):
+def _shot_splitter(pbp: pd.DataFrame) -> pd.DataFrame:
     # find every shot modifier
     shot_value = []
     shot_type = []
@@ -393,7 +400,7 @@ def shot_splitter(pbp):
     return pbp
 
 
-def shot_clock(pbp):
+def _shot_clock(pbp: pd.DataFrame) -> pd.DataFrame:
     shot_clocks = []
     poss_length = []
     is_off = False
@@ -470,16 +477,21 @@ def shot_clock(pbp):
     return pbp
 
 
-def make_game(game_id):
+# TODO: This should probably be split into a number of functions that
+# correspond to a sport's pbp data.
+def _make_game(game_id: int) -> pd.DataFrame:
+    url = f'https://stats.ncaa.org/contests/{game_id}/play_by_play'
     response = requests.get(
-        f'https://stats.ncaa.org/contests/{game_id}/play_by_play',
+        url=url,
         headers=headers
     )
+    time.sleep(5)
+
     html_content = response.text
     html_buffer = StringIO(html_content)
     soup = BeautifulSoup(html_content, 'html.parser')
     date = soup.find_all('td', class_='grey_text')[7].text.split()[0]
-    time = " ".join(
+    time_str = " ".join(
         soup.find_all('td', class_='grey_text')[7].text.split()[1:]
     )
     plays = pd.read_html(html_buffer)
@@ -497,28 +509,31 @@ def make_game(game_id):
     }
     stats = stats[3:]
     full_sheet = pd.concat(plays[3:], ignore_index=True)
-    full_sheet = build_lineups(full_sheet, stats)
-    full_sheet = cleanup(full_sheet)
-    full_sheet = event_sorter(full_sheet)
-    full_sheet = poss_counter(full_sheet, teams, team_players)
-    full_sheet = easy_features(full_sheet)
-    full_sheet = fix_bug(plays[1], full_sheet)
-    full_sheet = shot_splitter(full_sheet)
-    full_sheet = shot_clock(full_sheet)
+    full_sheet = _build_lineups(full_sheet, stats)
+    full_sheet = _cleanup(full_sheet)
+    full_sheet = _event_sorter(full_sheet)
+    full_sheet = _poss_counter(full_sheet, teams, team_players)
+    full_sheet = _easy_features(full_sheet)
+    full_sheet = _fix_bug(plays[1], full_sheet)
+    full_sheet = _shot_splitter(full_sheet)
+    full_sheet = _shot_clock(full_sheet)
     full_sheet['Game_id'] = game_id
     full_sheet['Date'] = date
-    full_sheet['Time'] = time
+    full_sheet['Time'] = time_str
     cols = list(full_sheet.columns)
     new_order = cols[-2:] + cols[:-2]
     full_sheet = full_sheet[new_order]
     return full_sheet
 
 
-def get_refs(game_id):
+def _get_refs(game_id: int) -> list:
+    url = f'https://stats.ncaa.org/contests/{game_id}/officials'
     response = requests.get(
-        f'https://stats.ncaa.org/contests/{game_id}/officials',
+        url=url,
         headers=headers
     )
+    time.sleep(5)
+
     html_content = response.text
     soup = BeautifulSoup(html_content, 'html.parser')
     rows = soup.find('table', class_='dataTable display')
@@ -529,11 +544,14 @@ def get_refs(game_id):
     return refs
 
 
-def game_stats(game_id):
+def _game_stats(game_id: int) -> pd.DataFrame:
+    url = f'https://stats.ncaa.org/contests/{game_id}/individual_stats'
     response = requests.get(
-        f'https://stats.ncaa.org/contests/{game_id}/individual_stats',
+        url=url,
         headers=headers
     )
+    time.sleep(5)
+
     html_content = response.text
     html_buffer = StringIO(html_content)
     stats = pd.read_html(html_buffer)[3:]
@@ -567,7 +585,7 @@ def game_stats(game_id):
             full_sheet.loc[index, 'P'] = 'G'
         full_sheet.loc[index, 'Player_id'] = player_ids[index]
     date = soup.find_all('td', class_='grey_text')[7].text.split()[0]
-    time = " ".join(
+    time_str = " ".join(
         soup.find_all('td', class_='grey_text')[7].text.split()[1:]
     )
     location = soup.find_all('td', class_='grey_text')[8].text
@@ -577,10 +595,10 @@ def game_stats(game_id):
         )
     )
     full_sheet['Date'] = date
-    full_sheet['Time'] = time
+    full_sheet['Time'] = time_str
     full_sheet['Location'] = location
     full_sheet['Attendance'] = attendance
-    refs = get_refs(game_id)
+    refs = _get_refs(game_id)
     for i, ref in enumerate(refs):
         full_sheet[f'Ref_{i + 1}'] = ref
     full_sheet = full_sheet.replace({np.nan: pd.NA})
@@ -588,4 +606,4 @@ def game_stats(game_id):
 
 
 if __name__ == "__main__":
-    game_stats(8174404)
+    _game_stats(8174404)
