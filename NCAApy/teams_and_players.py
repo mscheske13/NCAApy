@@ -6,15 +6,15 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from NCAApy.helpers import headers, opponent_split, split_result
+from NCAApy.helpers import headers, _opponent_split, _split_result
 
 
-def get_schedule(schedule_id):
+def _get_schedule(team_id):
     response = requests.get(
-        f"https://stats.ncaa.org/teams/{schedule_id}",
+        f"https://stats.ncaa.org/teams/{team_id}",
         headers=headers
     )
-    time.sleep(2)
+    time.sleep(5)
 
     html_content = response.text
     # TODO: We don't need to StringIO this if we're going to use
@@ -82,8 +82,8 @@ def get_schedule(schedule_id):
         "teams", pd.NA, regex=True
     )
     schedule["Opponent_id"] = team_ids
-    schedule = opponent_split(schedule, team)
-    schedule = split_result(schedule, team)
+    schedule = _opponent_split(schedule, team)
+    schedule = _split_result(schedule, team)
     schedule["Coach"] = coach
     schedule["Coach_id"] = coach_id
     schedule["Team_id"] = team_id
@@ -92,11 +92,13 @@ def get_schedule(schedule_id):
     return schedule
 
 
-def get_roster(roster_id):
+def _get_roster(roster_id):
     response = requests.get(
         f"https://stats.ncaa.org/teams/{roster_id}/season_to_date_stats",
         headers=headers,
     )
+    time.sleep(5)
+
     html_content = response.text
     soup = BeautifulSoup(html_content, "html.parser")
     html_buffer = StringIO(html_content)
@@ -150,7 +152,7 @@ def get_roster(roster_id):
     return roster
 
 
-def get_player(player_id):
+def _get_player(player_id):
     pd.set_option("future.no_silent_downcasting", True)
     attempts = 0
     while attempts < 5:
@@ -161,7 +163,7 @@ def get_player(player_id):
             # add extra responses from server, 401, 403, 404, 501
             # get this for all modules
             if response.status_code == 200:
-                time.sleep(2)
+                time.sleep(5)
                 break
         except requests.exceptions.RequestException:
             attempts += 1
@@ -224,8 +226,8 @@ def get_player(player_id):
         .rsplit(" ", 1)[0]
     )
     coach = soup.find("div", class_="card").find_all("a")[4].text
-    player_stuff = opponent_split(player_stuff, team)
-    player_stuff = split_result(player_stuff, team)
+    player_stuff = _opponent_split(player_stuff, team)
+    player_stuff = _split_result(player_stuff, team)
     player_stuff["Coach"] = coach
     player_stuff[["Minutes", "Seconds"]] = player_stuff["MP"].str.split(
         ":", expand=True
@@ -308,11 +310,13 @@ def get_player(player_id):
 
 
 # change pd.na
-def get_coach(coach_id):
+def _get_coach(coach_id: int) -> pd.DataFrame:
+    url = f"https://stats.ncaa.org/people/{coach_id}?sport_code=MBB"
     response = requests.get(
-        f"https://stats.ncaa.org/people/{coach_id}?sport_code=MBB",
+        url=url,
         headers=headers
     )
+    time.sleep(5)
     html_content = response.text
     html_buffer = StringIO(html_content)
     soup = BeautifulSoup(html_content, "html.parser")
@@ -332,10 +336,13 @@ def get_coach(coach_id):
     return coach_stuff
 
 
-def get_team(team_id):
+def _get_team(school_id):
+    url = f"https://stats.ncaa.org/teams/history/MBB/{school_id}"
     response = requests.get(
-        f"https://stats.ncaa.org/teams/history/MBB/{team_id}", headers=headers
+        url=url, headers=headers
     )
+    time.sleep(5)
+
     html_content = response.text
     html_buffer = StringIO(html_content)
     soup = BeautifulSoup(html_content, "html.parser")
@@ -359,4 +366,4 @@ def get_team(team_id):
 
 
 if __name__ == "__main__":
-    print(get_player(7673842))
+    print(_get_player(7673842))

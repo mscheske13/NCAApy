@@ -1,20 +1,23 @@
 import logging
+import time
+from datetime import date, datetime
 
-from bs4 import BeautifulSoup
+import pandas as pd
 import requests
+from bs4 import BeautifulSoup
+from dateutil import parser
+
 import NCAApy.variables as v
+
 # from NCAApy.helpers import *
 from NCAApy.helpers import headers
 
-from datetime import datetime
-import pandas as pd
 
-
-def collect_teams(soup, day):
-    away = []
-    away_ids = []
-    home = []
-    home_ids = []
+def _collect_teams(soup, day):
+    away_arr = []
+    away_ids_arr = []
+    home_arr = []
+    home_ids_arr = []
     teams_messy = soup.find_all("td", class_="opponents_min_width")
     count = 0
     for team in teams_messy:
@@ -26,29 +29,29 @@ def collect_teams(soup, day):
             team = team.text.strip()
         if not a_tag:
             if count % 2 == 0:
-                away_ids.append(pd.NA)
-                away.append(team)
+                away_ids_arr.append(pd.NA)
+                away_arr.append(team)
             else:
-                home_ids.append(pd.NA)
-                home.append(team)
+                home_ids_arr.append(pd.NA)
+                home_arr.append(team)
             count += 1
             continue
         box = int(a_tag["href"].split("/")[-1])
         if count % 2 == 0:
-            away_ids.append(box)
-            away.append(team)
+            away_ids_arr.append(box)
+            away_arr.append(team)
         else:
-            home_ids.append(box)
-            home.append(team)
+            home_ids_arr.append(box)
+            home_arr.append(team)
         count += 1
-    day["Away"] = away
-    day["Home"] = home
-    day["Away_id"] = away_ids
-    day["Home_id"] = home_ids
+    day["Away"] = away_arr
+    day["Home"] = home_arr
+    day["Away_id"] = away_ids_arr
+    day["Home_id"] = home_ids_arr
     return day
 
 
-def collect_info(soup, day):
+def _collect_info(soup, day):
     game_infos = soup.find_all("td", colspan="10")
     count = 0
     arenas = []
@@ -108,7 +111,7 @@ def collect_info(soup, day):
     return day
 
 
-def collect_game_ids(soup, day):
+def _collect_game_ids(soup, day):
     game_ids = []
     rows = soup.find_all("tr")
     count = 0
@@ -129,7 +132,7 @@ def collect_game_ids(soup, day):
     return day
 
 
-def collect_scores(soup, day):
+def _collect_scores(soup, day):
     scores = soup.find_all("td", class_="totalcol")
     away_score = []
     home_score = []
@@ -143,39 +146,77 @@ def collect_scores(soup, day):
     return day
 
 
-def get_day(date, conference_id, tournament_id, division, w, season_id):
-    if isinstance(date, datetime):
-        date = date.strftime("%m/%d/%Y")
-    day = pd.DataFrame()
-    year = int(date.split("/")[-1])
-    if int(date.split("/")[0]) > 10:
+def get_day(
+    game_date: datetime | date | str,
+    season_id: int,
+    conference_id: int = 0,
+    tournament_id: int = None,
+    division: int = None,
+    is_women_basketball: bool = False,
+):
+    date_str = ""
+
+    if isinstance(game_date, str):
+        date_str = parser.parse(date_str)
+    elif isinstance(game_date, datetime):
+        date_str = game_date.strftime("%m/%d/%Y")
+    elif isinstance(game_date, date):
+        game_datetime = datetime(
+            year=game_date.year,
+            month=game_date.month,
+            day=game_date.day,
+            hour=0,
+            minute=0,
+            second=0
+        )
+        date_str = game_datetime.strftime("%m/%d/%Y")
+        del date_str
+        # del game_datetime
+
+    day_df = pd.DataFrame()
+    year = int(date_str.split("/")[-1])
+    if int(date_str.split("/")[0]) > 10:
         year += 1
     year_id = v.years[year]
+
     if division == 2:
         year_id += 2
-    if division == 3:
+    elif division == 3:
         year_id += 4
-    if w:
+
+    if is_women_basketball:
         year_id -= 1
+
     if season_id:
         year_id = season_id
-    date2 = date.replace("/", "%2F")
+
+    date_str = date_str.replace("/", "%2F")
+    # url = (
+    #     "https://stats.ncaa.org/contests/livestream_scoreboards" +
+    #     "?utf8=%E2%9C%93&season_division_id=" +
+    #     f"{year_id}&game_date={date2}&conference_id={conference_id}" +
+    #     f"&tournament_id={tournament_id}&commit=Submit"
+    # )
+
     url = (
-        "https://stats.ncaa.org/contests/livestream_scoreboards" +
-        "?utf8=%E2%9C%93&season_division_id=" +
-        f"{year_id}&game_date={date2}&conference_id={conference_id}" +
-        f"&tournament_id={tournament_id}&commit=Submit"
+        f"https://stats.ncaa.org/season_divisions/{season_id}/" +
+        "livestream_scoreboards?utf8=%E2%9C%93&" +
+        f"season_division_id=&game_date={date_str}" +
+        f"&conference_id={conference_id}&tournament_id={tournament_id}" +
+        "&commit=Submit"
     )
     response = requests.get(url, headers=headers)
+    time.sleep(5)
+
     html_content = response.text
     soup = BeautifulSoup(html_content, "html.parser")
-    day = collect_teams(soup, day)
-    day = collect_info(soup, day)
-    day = collect_game_ids(soup, day)
-    day = day.dropna(subset=["Game_id"])
-    day.reset_index(drop=True, inplace=True)
-    day = collect_scores(soup, day)
-    day["Date"] = date
+    day_df = _collect_teams(soup, day_df)
+    day_df = _collect_info(soup, day_df)
+    day_df = _collect_game_ids(soup, day_df)
+    day_df = day_df.dropna(subset=["Game_id"])
+    day_df.reset_index(drop=True, inplace=True)
+    day_df = _collect_scores(soup, day_df)
+    day_df["Date"] = game_date
     desired_order = [
         "Date",
         "Time",
@@ -191,5 +232,5 @@ def get_day(date, conference_id, tournament_id, division, w, season_id):
         "Home_id",
         "Game_id",
     ]
-    day = day[desired_order]
-    return day
+    day_df = day_df[desired_order]
+    return day_df
