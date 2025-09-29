@@ -1,0 +1,1 @@
+from .day_scores import scrape_day_scores
