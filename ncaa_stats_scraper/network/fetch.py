@@ -37,7 +37,10 @@ def get_site(url: str, wait_for_selector: str | None = "body") -> io.StringIO:
 
     with sync_playwright() as p:
         # Always launch a new Chromium instance (headless=False can help with JS/Akamai)
-        browser = p.chromium.launch(headless=False)  # <- now browser will open
+        browser = p.chromium.launch(
+            headless=False,
+            args=["--window-position=-32000,-32000"]
+        )
         context = browser.new_context(
             extra_http_headers={k: v for k, v in headers.items() if k != "User-Agent"},
             user_agent=headers["User-Agent"]
