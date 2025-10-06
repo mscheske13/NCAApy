@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: Debug ncaa_stats_scraper",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "ncaa_stats_scraper.find_programs.programs",
+        "console": "integratedTerminal",
+        "cwd": "/home/mscheske"
+      }
+    ]
+  }
+  
