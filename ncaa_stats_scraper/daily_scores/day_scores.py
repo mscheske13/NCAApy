@@ -63,6 +63,13 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
         rows = game_card.find('tbody').find_all('tr', recursive=False)
         if not rows[-1].find('a'):
             continue # skip games that didn't happen
+
+        if rows[-1].find('script'):
+            mini["Status"] = "Upcoming"
+        elif rows[-1].find('a').text == 'Live Box Score':
+            mini["Status"] = "Live"
+        else:
+            mini["Status"] = "Finished"
         mini["Game_id"] = int(rows[-1].find('a').get("href").split("/")[-2])
 
         scores = game_card.find_all('td', class_="totalcol")
@@ -82,18 +89,10 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
             mini["Away_score"] = np.nan
 
         try:
-            attendance = rows[0].find_all('div')[2].text.strip().split()[-1].replace(",", "")
-        except IndexError:
-            pass
-            attendance = ""
-        if attendance == 'Attend': #sometimes none is given
-            mini["Attendance"] = int(attendance)
-        else:
+            attendance = int(rows[0].find_all('div')[2].text.strip().split()[-1].replace(",", ""))
+            mini["Attendance"] = attendance
+        except (IndexError, ValueError):
             mini["Attendance"] = np.nan
-
-
-
-
 
         formats = [
             '%m/%d/%Y %I:%M %p',  # Can list as either Datetime or Date
@@ -123,7 +122,10 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
             else:
                 mini["Home_wins"] = np.nan
                 mini["Home_losses"] = np.nan
-            mini["Home_id"] = int(rows[-2].find('a').get("href").split("/")[-1])
+            if "winner" not in home_team.lower() and "loser" not in home_team.lower():
+                mini["Home_id"] = int(rows[-2].find('a').get("href").split("/")[-1])
+            else:
+                mini["Home_id"] = np.nan
             if not keep_seeds and home_team[0] == '#':
                 home_team = " ".join(home_team.split()[1:])
         else:
@@ -139,7 +141,10 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
             else:
                 mini["Away_wins"] = np.nan
                 mini["Away_losses"] = np.nan
-            mini["Away_id"] = int(rows[-3].find('a').get("href").split("/")[-1])
+            if "winner" not in away_team.lower() and "loser" not in away_team.lower():
+                mini["Away_id"] = int(rows[-3].find('a').get("href").split("/")[-1])
+            else:
+                mini["Away_id"] = np.nan
             if not keep_seeds and away_team[0] == '#':
                 away_team = " ".join(away_team.split()[1:])
         else:
@@ -174,6 +179,7 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
     new_order = [
     "Game_id",
     "Event",
+    "Status",
     "Location",
     "Neutral",
     "Attendance",
@@ -200,5 +206,5 @@ def scrape_day_scores(sport_code: str, day: date = date.today(), division: int =
 
 if __name__ == "__main__":
 
-    df = scrape_day_scores("MBB", day= date(2024, 11, 26), division=1)
+    df = scrape_day_scores("MBB", day= date(2025, 11, 26), division=1)
 
